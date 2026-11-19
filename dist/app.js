@@ -140,7 +140,7 @@ h='<h1>Today</h1><div class="card"><b>Which swaps did you complete?</b>'+
 }).join('') : '<p class="mut">Choose a swap in your meal plan first.</p>')+'</div><div class="card"><b>Did you add your '+esc(S.habit.food)+' to '+esc(S.habit.anchor.toLowerCase())+'?</b><p class="mut">'+habitPortion()+' · estimated '+amt+' g fiber</p><div class="row"><button class="chip '+(S.habitAnswer==='yes'?'on':'')+'" data-act="yes" aria-pressed="'+(S.habitAnswer==='yes')+'">Yes, +'+amt+' g</button><button class="chip '+(S.habitAnswer==='skip'?'on':'')+'" data-act="skip" aria-pressed="'+(S.habitAnswer==='skip')+'">Skip</button></div><p class="mut" role="status">'+(S.habitAnswer==='skip'?'Skipped. No problem — try again at your next meal.':S.habitAnswer==='yes'?'Habit completed. Your progress is updated.':'')+'</p></div><div class="card row sb"><span>Added fiber today</span><b>'+total()+' of '+GOAL+' g</b></div><button class="btn" data-act="viewProgress">View progress</button>'}
 if(S.tab==5){h='<h1>Added fiber today</h1><p class="sub">Daily goal: +'+GOAL+' g added fiber.</p>'+ring()+'<div class="note">'+message()+'</div>'+
 '<div class="card row sb"><span>Swaps</span><b>'+((S.swapEntry&&S.swapAnswer==='yes')?S.swapEntry.amount:0)+' g added</b></div><div class="card row sb"><span>Habit</span><b>'+((S.habitEntry&&S.habitAnswer==='yes')?S.habitEntry.amount:0)+' g added</b></div>'+
-'<button class="btn ghost" data-act="reset">Reset demo</button>'}
+'<button class="btn ghost" data-act="reset">Restart</button>'}
 return h}
 function render(){
 try{localStorage.setItem("fibrering-v1",JSON.stringify(S))}catch(e){}
@@ -189,7 +189,21 @@ else if(a=="yes"){answerHabit("yes")}
 else if(a=="skip"){answerHabit("skip")}
 else if(a=="meal"){S.meal=id;render()}
 else if(a=="add"){log(S.meal,+b.dataset.n,b.dataset.t+" added to "+S.meal.toLowerCase()+".")}
-else if(a=="reset"){S.fib={Breakfast:0,Lunch:0,Dinner:0,Snack:0};S.done={};S.last=null;S.toast="Demo meal entries reset.";S.habitLogged=false;S.habitAnswer=null;S.habitEntry=null;S.swapAnswer=null;S.swapEntry=null;S.completedSwaps={};S.history=[];render()}});
+else if(a=="reset"){
+  S = {
+    ...JSON.parse(JSON.stringify(INITIAL)),
+    onb: 3,
+    customStaples: [],
+    swapChoices: {},
+    declined: {},
+    completedSwaps: {}
+  };
+  showMore = false;
+  render.lastTab = undefined;
+  render();
+  el("scr").scrollTop = 0;
+}});
+
 document.addEventListener("input",function(e){var t=e.target,a=t.dataset.act;if(a=="ready"){S.ready=+t.value;el("rv").textContent=t.value}else if(a=="conf"){S.conf=+t.value;el("cv").textContent=t.value}});
 document.addEventListener("change",function(e){var t=e.target,a=t.dataset.act;if(a=="ready"||a=="conf"){render();return}if(!a)return;
 if(a=="habitCups")return;
