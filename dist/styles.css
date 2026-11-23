@@ -47,3 +47,16 @@ html,body{background:#000}body{display:flex;min-height:100dvh;padding:18px;gap:0
 .opt.on{background:var(--leaf-bg);border-color:var(--leaf);box-shadow:0 0 0 1px var(--leaf)}
 @media(max-width:600px),(pointer:coarse) and (max-width:1000px){.cats{margin-inline:-20px;padding-inline:20px}}
 @media(max-width:360px){.tiles{grid-template-columns:1fr}}
+
+/* Check-in progress line, text buttons, swap extras and shopping list. */
+.picked{margin:4px 0 6px;font-size:14px;color:var(--mut)}.picked b{color:var(--ink)}
+.link{border:0;background:none;padding:6px 0;color:var(--leaf);font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px;min-height:36px}
+.more-opts{display:flex;flex-wrap:wrap;gap:4px 18px;margin:-2px 0 6px}
+.swap-form{margin:4px 0 12px;background:var(--leaf-bg);border-color:transparent}.swap-form label{display:block;margin:12px 0 6px;font-size:14px}.swap-form input{width:100%;min-height:44px;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}
+.card .row .chip+.chip{margin-left:0}.card>.row{flex-wrap:wrap}
+.shop-note{margin:10px 0 4px}
+.shop{padding:4px 15px}.shop-item{display:flex;align-items:center;gap:8px;padding:11px 0;border-top:1px solid var(--line)}.shop-item:first-child{border-top:0}
+.shop-item label{flex:1;min-width:0;display:flex;align-items:flex-start;gap:12px;cursor:pointer}.shop-item input{margin-top:2px;flex-shrink:0}.shop-item .nm{display:block;font-weight:500;line-height:1.3;overflow-wrap:anywhere}.shop-item .mut{display:block;font-size:13px;line-height:1.45;margin-top:2px}
+.shop-item.got .nm{text-decoration:line-through;color:var(--mut)}
+.badge{display:inline-block;min-width:20px;margin-left:4px;padding:0 6px;border-radius:999px;background:var(--grain);color:#fff;font-size:12px;font-weight:700;line-height:20px;vertical-align:1px}
+.opt-row{display:flex;align-items:center;gap:4px}.opt-row .opt{flex:1;min-width:0}
