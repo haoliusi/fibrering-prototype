@@ -1,21 +1,29 @@
 # FibreRing
 
-FibreRing is a browser prototype for planning food swaps, adding a fiber habit, and tracking added fiber against a +15 g daily goal.
+A gentle, interactive prototype for building everyday fiber habits. Plain HTML, CSS and JavaScript, with no build step and no dependencies.
 
-## Run locally
+## Run it
 
-Download this repository as a ZIP or clone it. Open `dist/index.html` in a browser, or serve it locally with Python:
+Open `dist/index.html` in a browser, or serve the folder:
 
-```sh
+```bash
 python3 -m http.server 4173 --directory dist
 ```
 
-Then open `http://localhost:4173`.
+Then visit http://localhost:4173.
 
-## How it works
+## Flow
 
-1. Select staples and set up swaps. The plan estimates the extra fiber if each listed swap is completed once today.
-2. Choose a meal, a habit food, and a cooked portion in cups. Save the habit to see the notification preview.
-3. Mark completed swaps and the habit on Today. The progress ring counts the added fiber from those entries.
+**Onboarding (once):** Check-in (pick staples) -> Swaps (build a meal plan) -> Habit (if-then plan and reminder) -> notification preview.
 
-The app uses browser storage. The notification is a preview. Fiber amounts are estimates based on the reference foods and portions linked in the app.
+**After setup:** bottom navigation with **Today**, **Progress** and **Preferences**. Preferences summarizes your setup choices and lets you edit each section.
+
+The daily goal is +15 g of added fiber. State is saved in `localStorage` under `fibrering-v1`. Use **Restart** on the Progress tab to clear it.
+
+## Files
+
+- `dist/index.html`: page shell and phone frame
+- `dist/styles.css`: styles
+- `dist/app.js`: state, rendering and event handling
+
+Fiber estimates come from USDA, USDA/HHS and VA reference tables (linked in the app). Values vary by brand and preparation.

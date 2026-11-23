@@ -1,4 +1,3 @@
-
 const GOAL=15;
 var MEALS=["Breakfast","Lunch","Dinner","Snack"];
 var STAPLES=[
@@ -19,6 +18,8 @@ fib:{Breakfast:0,Lunch:0,Dinner:0,Snack:0},done:{},fiberVersion:3,last:null,aske
 var INITIAL=JSON.parse(JSON.stringify(S));
 try { var saved=JSON.parse(localStorage.getItem("fibrering-v1")); if(saved && saved.onb>=0) {
   S=Object.assign(S,saved);
+  // Existing completed setups should open with the new primary navigation.
+  S.onboarded ??= !!(saved.planConfirmed && saved.habit?.anchorChosen && saved.habit?.foodChosen);
   S.habit.anchorChosen ??= saved.tab>=3 || !!S.habitEntry || S.habit.anchor!=='Lunch';
   S.habit.foodChosen ??= saved.tab>=3 || !!S.habitEntry || S.habit.food!=='black beans';
   if((saved.fiberVersion||0)<2) {
@@ -43,7 +44,7 @@ try { var saved=JSON.parse(localStorage.getItem("fibrering-v1")); if(saved && sa
 } } catch(e) {}
 S.onb=3;
 document.documentElement.dataset.theme="light";
-S.tab=0;
+S.editing=false;S.tab=S.onboarded?4:0;
 S.customStaples=Array.isArray(S.customStaples)?S.customStaples:[];
 function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function staples(){return STAPLES.concat(S.customStaples.map(x=>({...x,name:esc(x.name),to:esc(x.name)+' — choose a higher-fiber alternative',gain:'Compare fiber on the package label.'})))}
@@ -83,7 +84,7 @@ function habitReady() {
 }
 const SWAP_SOURCES = '<p class="mut">Reference portions and example products. Fiber varies by brand and preparation. <a href="https://www.nal.usda.gov/sites/default/files/page-files/Total_Dietary_Fiber.pdf" target="_blank" rel="noopener">USDA nutrient data</a> · <a href="https://www.ncbi.nlm.nih.gov/books/NBK589559/table/usdaddb12.tab1/" target="_blank" rel="noopener">USDA cereal baseline</a> · <a href="https://www.dietaryguidelines.gov/sites/default/files/2024-08/Food-Sources-Fiber-Standard-508C.pdf" target="_blank" rel="noopener">USDA/HHS portions</a> · <a href="https://nutrition.va.gov/NUTRITION/docs/UpdatedPatientEd/FiberContentofFoods2021.pdf" target="_blank" rel="noopener">VA oatmeal data</a></p>';
 
-var TABS=["Check-in","Swaps","Habit","Notification","Today","Progress"];
+var TABS=["Check-in","Swaps","Habit","Notification","Today","Progress","Preferences"];
 
 function navIcon(i){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+[
 '<rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 4V2h6v2M9 12l2 2 4-4"/>',
@@ -108,6 +109,8 @@ function log(meal,amt,txt,habit){
 S.history.push({fib:{...S.fib},done:{...S.done},last:S.last,habitLogged:S.habitLogged,habitAnswer:S.habitAnswer,habitEntry:S.habitEntry,swapAnswer:S.swapAnswer,swapEntry:S.swapEntry});
 S.fib[meal]+=amt;S.done[meal]=true;S.last={meal:meal,amt:amt};if(habit)S.habitLogged=true;S.toast=txt;render()
 }
+function fmtTime(t){var p=String(t||'').split(':'),h=+p[0],m=p[1]||'00';if(isNaN(h))return esc(t);return (h%12||12)+':'+m+(h<12?' AM':' PM')}
+function prefSec(t,act,body){return '<div class="card"><div class="row sb"><b>'+t+'</b><button class="chip" data-act="'+act+'" aria-label="Edit '+t.toLowerCase()+'">Edit</button></div>'+body+'</div>'}
 function view(){var h="";
 if(S.tab==0){h='<h1>Quick check-in</h1><p class="sub">Pick the staples you eat often. This takes about 30 seconds, every two weeks.</p>';
 staples().forEach(function(s){h+='<div class="card"><label class="stp"><input type="checkbox" data-act="stp" data-id="'+s.id+'"'+(S.on[s.id]?' checked':'')+'><span style="flex:1">'+s.name+'</span></label>'+(S.on[s.id]?'<div class="row" style="margin-top:8px"><span class="mut">Times per week</span><select data-act="freq" data-id="'+s.id+'" style="width:80px">'+[1,2,3,4,5,6,7].map(function(n){return '<option'+(S.freq[s.id]==n?' selected':'')+'>'+n+'</option>'}).join('')+'</select></div>':'')+'</div>'});
@@ -141,6 +144,12 @@ h='<h1>Today</h1><div class="card"><b>Which swaps did you complete?</b>'+
 if(S.tab==5){h='<h1>Added fiber today</h1><p class="sub">Daily goal: +'+GOAL+' g added fiber.</p>'+ring()+'<div class="note">'+message()+'</div>'+
 '<div class="card row sb"><span>Swaps</span><b>'+((S.swapEntry&&S.swapAnswer==='yes')?S.swapEntry.amount:0)+' g added</b></div><div class="card row sb"><span>Habit</span><b>'+((S.habitEntry&&S.habitAnswer==='yes')?S.habitEntry.amount:0)+' g added</b></div>'+
 '<button class="btn ghost" data-act="reset">Restart</button>'}
+if(S.tab==6){var sel6=staples().filter(function(s){return S.on[s.id]}),ad6=sel6.filter(function(s){return S.adopted[s.id]});
+h='<h1>Preferences</h1><p class="sub">What you chose during setup. Change any of it anytime.</p><div class="toast">'+S.toast+'</div>'+
+prefSec('Staples','editStaples',sel6.length?sel6.map(function(s){return '<div class="row sb" style="margin-top:10px"><span>'+s.name+'</span><span class="mut">'+S.freq[s.id]+(S.freq[s.id]===1?' time':' times')+' per week</span></div>'}).join(''):'<p class="mut">None selected.</p>')+
+prefSec('Swaps','editSwaps',ad6.length?ad6.map(function(s){var g=swapGain(s);return '<div style="margin-top:10px">'+s.name+' → <b>'+choice(s)+'</b><div class="mut">'+(g===null?'Fiber estimate unavailable':'Estimated +'+g+' g fiber today')+'</div></div>'}).join(''):'<p class="mut">No swaps in your meal plan.</p>')+
+prefSec('Habit','editHabit','<div style="margin-top:10px">When I serve <b>'+esc(S.habit.anchor.toLowerCase())+'</b>, I add <b>'+habitPortion()+' '+esc(S.habit.food)+'</b></div><div class="mut">Estimated +'+habitGain()+' g fiber · Reminder at '+fmtTime(S.habit.time)+'</div>')+
+'<div class="card row sb"><span>Daily goal</span><b>+'+GOAL+' g added fiber</b></div>'}
 return h}
 function render(){
 try{localStorage.setItem("fibrering-v1",JSON.stringify(S))}catch(e){}
@@ -148,8 +157,8 @@ document.documentElement.dataset.theme="light";
 var sc=el("scr"),top=render.lastTab===S.tab?sc.scrollTop:0;render.lastTab=S.tab;sc.innerHTML=view();
 document.querySelector('.app-header').hidden=S.tab===3;
 document.querySelector('.phone').classList.toggle('is-lockscreen',S.tab===3);
-if(S.tab<3)sc.insertAdjacentHTML('afterbegin','<div class="setup-steps" aria-label="Step '+(S.tab+1)+' of 3">'+['Check-in','Swaps','Habit'].map((t,i)=>'<div class="'+(i<=S.tab?'complete':'')+'"><span></span></div>').join('')+'</div>');
-el('header-back').hidden=S.tab===0||S.tab===3;
+if(S.tab<3&&!S.editing)sc.insertAdjacentHTML('afterbegin','<div class="setup-steps" aria-label="Step '+(S.tab+1)+' of 3">'+['Check-in','Swaps','Habit'].map((t,i)=>'<div class="'+(i<=S.tab?'complete':'')+'"><span></span></div>').join('')+'</div>');
+el('header-back').hidden=!(S.tab===1||S.tab===2||(S.editing&&S.tab===0));
 
 sc.classList.toggle('notification-screen',S.tab===3);
 
@@ -159,20 +168,22 @@ sc.querySelectorAll('.toast').forEach(x=>x.setAttribute('role','status'));
 sc.querySelectorAll('select[data-act]:not([data-act=swapChoice]),input[type=time]').forEach(x=>x.setAttribute('aria-label',({freq:'Times per week',anchor:'Habit meal',food:'Habit food',time:'Reminder time'})[x.dataset.act]||x.dataset.act));
 sc.querySelectorAll('.chip').forEach(x=>{if(['why','meal','adopt'].includes(x.dataset.act))x.setAttribute('aria-pressed',x.classList.contains('on'))});
 sc.scrollTop=top;
+var nv=el('nav');nv.hidden=!S.onboarded||S.editing||S.tab===3;nv.innerHTML=[['Today',4],['Progress',5],['Preferences',6]].map(function(t){return '<button type="button" data-act="tab" data-id="'+t[1]+'"'+(S.tab===t[1]?' class="on" aria-current="page"':'')+'>'+t[0]+'</button>'}).join('');
 }
 
 document.addEventListener("click",function(e){var b=e.target.closest("[data-act]");if(!b)return;var a=b.dataset.act,id=b.dataset.id;
-if(a=="back"){S.tab=S.tab===4?2:Math.max(0,S.tab-1);render()}
+if(a=="back"){S.tab=S.editing?6:Math.max(0,S.tab-1);S.editing=false;S.toast="";render();el("scr").scrollTop=0}
 else if(a=="more"){showMore=!showMore;render();if(showMore)el("staple-name").focus()}
 
 else if(a=="undo"){var prev=S.history.pop();if(prev)Object.assign(S,prev);S.toast="Last entry undone.";render()}
 else if(a=="custom"){var inp=el("grams"),v=Number(inp.value);if(!Number.isFinite(v)||v<=0||v>100){inp.setCustomValidity("Enter an amount between 0.1 and 100 grams.");inp.reportValidity();return}log(S.meal,Math.round(v*10)/10,"Fiber added to "+S.meal.toLowerCase()+".")}
-else if(a=="tab"){S.tab=+id;S.toast="";render();el("scr").scrollTop=0}
-else if(a=="saveStaples"){if(staples().some(function(s){return S.on[s.id]})){S.tab=1;S.toast="";render()}}
-else if(a=="confirmPlan" && staples().some(s=>S.on[s.id]&&S.adopted[s.id])){S.planConfirmed=true;S.tab=2;render()}
+else if(a=="tab"){S.editing=false;S.tab=+id;S.toast="";render();el("scr").scrollTop=0}
+else if(a=="saveStaples"){if(staples().some(function(s){return S.on[s.id]})){if(S.editing){staples().forEach(function(s){if(!S.on[s.id]&&S.adopted[s.id]){S.adopted[s.id]=false;clearSwap(s.id)}});S.editing=false;S.tab=6;S.toast="Staples updated."}else{S.tab=1;S.toast=""}render()}}
+else if(a=="confirmPlan" && staples().some(s=>S.on[s.id]&&S.adopted[s.id])){S.planConfirmed=true;if(S.editing){S.editing=false;S.tab=6;S.toast="Swaps updated."}else S.tab=2;render()}
 else if(a=="adopt"){S.planConfirmed=false;S.adopted[id]=!S.adopted[id];S.declined[id]=false;if(!S.adopted[id])clearSwap(id);render()}
 else if(a=="hide"){S.planConfirmed=false;S.declined[id]=!S.declined[id];S.adopted[id]=false;render()}
 else if(a=="openToday"){S.tab=4;render()}
+else if(a=="editStaples"||a=="editSwaps"||a=="editHabit"){S.editing=true;S.toast="";S.tab=a=="editStaples"?0:a=="editSwaps"?1:2;render();el("scr").scrollTop=0}
 else if(a=="viewProgress"){S.tab=5;render()}
 else if(a=="saveHabit" && habitReady()){
   if (S.habitEntry && (S.habitEntry.meal !== S.habit.anchor || (S.habitAnswer === 'yes' && S.habitEntry.amount !== habitGain()))) {
@@ -184,7 +195,7 @@ else if(a=="saveHabit" && habitReady()){
     S.habitLogged = false;
     S.last = S.swapEntry ? {meal:S.swapEntry.meal, amt:S.swapEntry.amount} : null;
   }
-  S.tab=3;S.toast="Habit saved. Reminder preview: "+S.habit.time+".";render()}
+  if(S.editing){S.editing=false;S.tab=6;S.toast="Habit updated."}else{S.onboarded=true;S.tab=3;S.toast="Habit saved. Reminder preview: "+S.habit.time+"."}render()}
 else if(a=="yes"){answerHabit("yes")}
 else if(a=="skip"){answerHabit("skip")}
 else if(a=="meal"){S.meal=id;render()}
@@ -278,7 +289,7 @@ if(e.defaultPrevented||e.isComposing||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey
 if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
 var target=e.target;
 if(target instanceof Element && target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="slider"],[role="combobox"],[role="textbox"]'))return;
-var next=Math.max(0,Math.min(TABS.length-1,S.tab+(e.key==='ArrowRight'?1:-1)));
+if(!S.onboarded||S.editing)return;var order=[4,5,6],next=order[Math.max(0,Math.min(order.length-1,order.indexOf(S.tab)+(e.key==='ArrowRight'?1:-1)))];
 if(next===S.tab)return;
 e.preventDefault();S.tab=next;S.toast='';render();el('scr').scrollTop=0;
 });
