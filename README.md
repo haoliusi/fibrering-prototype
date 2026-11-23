@@ -14,11 +14,15 @@ Then visit http://localhost:4173.
 
 ## Flow
 
-**Onboarding (once):** Check-in (pick staples) -> Swaps (build a meal plan) -> Habit (if-then plan and reminder) -> notification preview.
+**Onboarding (once):** Check-in (browse staples by category, tap to add, set times per week for each) -> Swaps (tap a swap option for each staple and build a meal plan) -> Habit (if-then plan and reminder) -> notification preview.
 
 **After setup:** bottom navigation with **Today**, **Progress** and **Preferences**. Preferences summarizes your setup choices and lets you edit each section.
 
 The daily goal is +15 g of added fiber. State is saved in `localStorage` under `fibrering-v1`. Use **Restart** on the Progress tab to clear it.
+
+## Staples and swaps
+
+The staples catalog (`STAPLES`, grouped by `CATS`) and each staple's swap options with fiber per portion (`SWAPS`) are at the top of `dist/app.js`. Times per week is stored per staple and is shown for context; fiber estimates assume one swap a day. Options listed under `examples` are brand-dependent product values.
 
 ## Files
 

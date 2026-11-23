@@ -1,9 +1,28 @@
 const GOAL=15;
 var MEALS=["Breakfast","Lunch","Dinner","Snack"];
+var CATS=[
+{id:"grains",name:"Grains",icon:'<path d="M3 11h18a9 9 0 0 1-18 0Z"/><path d="M8 8c1-2 3-2 4-4m1 4c1-1.5 2.5-2 4-2"/>'},
+{id:"breads",name:"Breads",icon:'<path d="M6 20v-9a4 4 0 0 1-2-3.5C4 4 8 3.5 12 3.5S20 4 20 7.5a4 4 0 0 1-2 3.5v9Z"/>'},
+{id:"breakfast",name:"Breakfast",icon:'<path d="M4 9h13v5a6 6 0 0 1-12 0Z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3v3m4-3v3"/>'},
+{id:"pasta",name:"Pasta",icon:'<path d="M4 7c2-2 4 2 6 0s4 2 6 0 3-1 4 0M4 12c2-2 4 2 6 0s4 2 6 0 3-1 4 0M4 17c2-2 4 2 6 0s4 2 6 0 3-1 4 0"/>'},
+{id:"snacks",name:"Snacks",icon:'<path d="M6 10h12l-2 11H8Z"/><path d="M7 10a2.5 2.5 0 0 1 3-4 2.5 2.5 0 0 1 4 0 2.5 2.5 0 0 1 3 4"/>'},
+{id:"sides",name:"Sides & drinks",icon:'<path d="M20 4C9 3 3 10 7 16s14 2 13-12ZM5 21l10-11"/>'}];
+var CAT_ALL='<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>';
+function catIcon(p){return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+p+'</svg>'}
 var STAPLES=[
-{id:"rice",name:"White rice",freq:4,to:"Brown rice or quinoa",gain:"about +2 to 3 g per serving"},
-{id:"bread",name:"White bread",freq:5,to:"100% whole grain bread",gain:"about +2 g per slice"},
-{id:"cereal",name:"Standard cereal",freq:3,to:"High-fiber cereal",gain:"about +3 to 5 g per bowl"}];
+{id:"rice",cat:"grains",name:"White rice",freq:4},
+{id:"couscous",cat:"grains",name:"Couscous",freq:3},
+{id:"bread",cat:"breads",name:"White bread",freq:5},
+{id:"tortilla",cat:"breads",name:"Flour tortillas",freq:3},
+{id:"bagel",cat:"breads",name:"Plain bagels",freq:3},
+{id:"cereal",cat:"breakfast",name:"Standard cereal",freq:3},
+{id:"pancakes",cat:"breakfast",name:"Pancakes",freq:3},
+{id:"pasta",cat:"pasta",name:"White pasta",freq:3},
+{id:"noodles",cat:"pasta",name:"Egg noodles",freq:3},
+{id:"chips",cat:"snacks",name:"Potato chips",freq:3},
+{id:"crackers",cat:"snacks",name:"Saltine crackers",freq:3},
+{id:"mashed",cat:"sides",name:"Mashed potatoes",freq:3},
+{id:"juice",cat:"sides",name:"Orange juice",freq:3}];
 // USDA/HHS Food Sources of Fiber: standard portions, normalized to ½ cup cooked.
 const FOODS = {
   "black beans": 7.5, lentils: 7.8, chickpeas: 6.3, broccoli: 5.2 / 2,
@@ -12,7 +31,7 @@ const FOODS = {
   kale: 4.7 / 2, cauliflower: 4.9 / 2, "green beans": 4 / 2,
   "brussels sprouts": 6.4 / 2
 };
-var S={tab:0,on:{rice:true,bread:true,cereal:true,pasta:false},freq:{rice:4,bread:5,cereal:3,pasta:2},adopted:{},
+var S={tab:0,cat:"all",on:{rice:true,bread:true,cereal:true},freq:{rice:4,bread:5,cereal:3},adopted:{},
 habit:{anchor:"Lunch",food:"black beans",cups:0.5,time:"12:00"},meal:"Lunch",toast:"",
 fib:{Breakfast:0,Lunch:0,Dinner:0,Snack:0},done:{},fiberVersion:3,last:null,asked:true,msg:"",onb:0,ready:6,conf:8,why:{},habitLogged:false,history:[],theme:"light"};
 var INITIAL=JSON.parse(JSON.stringify(S));
@@ -47,18 +66,41 @@ document.documentElement.dataset.theme="light";
 S.editing=false;S.tab=S.onboarded?4:0;
 S.customStaples=Array.isArray(S.customStaples)?S.customStaples:[];
 function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function staples(){return STAPLES.concat(S.customStaples.map(x=>({...x,name:esc(x.name),to:esc(x.name)+' — choose a higher-fiber alternative',gain:'Compare fiber on the package label.'})))}
+function staples(){return STAPLES.concat(S.customStaples.map(x=>({...x,cat:'custom',name:esc(x.name),to:'a higher-fiber alternative'})))}
+if(S.cat!=='all'&&!CATS.some(c=>c.id===S.cat))S.cat='all';
 var showMore=false;
 S.swapChoices=S.swapChoices||{};S.declined=S.declined||{};
-// USDA SR Legacy (rice and bread) and USDA/HHS/VA portion tables (cereal).
+// Grams of fiber per portion. USDA SR Legacy / FoodData Central and USDA/HHS/VA
+// portion tables. Options listed in `examples` vary widely by brand.
 const SWAPS = {
   rice: {portion: '100 g cooked', original: 0.4,
-    options: {'Brown rice': 1.6, Quinoa: 2.8, 'Wild rice': 1.8}},
-  bread: {portion: '30 g', original: 2.7 * 0.3,
-    options: {'100% whole grain bread': 6 * 0.3, 'Whole rye bread': 5.8 * 0.3, 'Whole wheat pita': 6.1 * 0.3}},
+    options: {'Brown rice': 1.6, Quinoa: 2.8, 'Wild rice': 1.8, 'Pearled barley': 3.8}},
+  couscous: {portion: '1 cup cooked', original: 2.2,
+    options: {Bulgur: 8.2, 'Pearled barley': 6, Quinoa: 5.2}},
+  bread: {portion: '30 g', original: 2.7 * 0.3, examples: ['Sprouted grain bread'],
+    options: {'100% whole grain bread': 6 * 0.3, 'Whole rye bread': 5.8 * 0.3, 'Whole wheat pita': 6.1 * 0.3, 'Sprouted grain bread': 3}},
+  tortilla: {portion: 'one wrap', original: 1.4, examples: ['Whole wheat tortilla'],
+    options: {'Whole wheat tortilla': 4, '2 small corn tortillas': 3}},
+  bagel: {portion: 'one medium bagel or muffin', original: 2.4, examples: ['Whole wheat bagel'],
+    options: {'Whole wheat bagel': 6, 'Whole wheat English muffin': 4.4}},
   cereal: {portion: '½ cup prepared', original: 0.4, baseline: 'corn flakes',
-    options: {'High-fiber cereal': 14, Oatmeal: 2, 'Bran cereal': 5.5 * 2 / 3}}
+    options: {'High-fiber cereal': 14, Oatmeal: 2, 'Bran cereal': 5.5 * 2 / 3, 'Shredded wheat': 3}},
+  pancakes: {portion: 'one breakfast serving', original: 1,
+    options: {'Whole wheat pancakes': 3, 'Pancakes with ½ cup raspberries': 5, 'Oatmeal with ½ cup raspberries': 6}},
+  pasta: {portion: '1 cup cooked', original: 2.5, examples: ['Chickpea pasta', 'Red lentil pasta'],
+    options: {'Whole wheat pasta': 6.3, 'Chickpea pasta': 8, 'Red lentil pasta': 6}},
+  noodles: {portion: '1 cup cooked', original: 1.9, examples: ['Chickpea pasta'],
+    options: {'Whole wheat pasta': 6.3, 'Chickpea pasta': 8, 'Egg noodles with ½ cup broccoli': 4.5}},
+  chips: {portion: 'one snack', original: 1.2, baseline: '1 oz potato chips',
+    options: {'3 cups air-popped popcorn': 3.5, '1 oz almonds': 3.5, 'A medium pear': 5.5}},
+  crackers: {portion: 'one snack', original: 0.4, baseline: '5 saltines', examples: ['Whole grain crackers', 'Rye crispbread'],
+    options: {'Whole grain crackers': 3, 'Rye crispbread': 3.5}},
+  mashed: {portion: '½ cup side', original: 1.6,
+    options: {'Green peas': 4.4, 'Black beans': 7.5, Broccoli: 2.6}},
+  juice: {portion: 'one serving', original: 0.5, baseline: '1 cup orange juice',
+    options: {'A whole orange': 3.1, 'A medium apple with skin': 4.4, '1 cup raspberries': 8}}
 };
+function optGain(id, opt) { const d = SWAPS[id]; return roundFiber(d.options[opt] - d.original); }
 S.completedSwaps ??= {};
 const roundFiber = value => Math.round((value + 1e-9) * 10) / 10;
 function choice(staple) {
@@ -82,7 +124,7 @@ function habitPortion() {
 function habitReady() {
   return S.habit.anchorChosen && S.habit.foodChosen && S.habit.cups > 0;
 }
-const SWAP_SOURCES = '<p class="mut">Reference portions and example products. Fiber varies by brand and preparation. <a href="https://www.nal.usda.gov/sites/default/files/page-files/Total_Dietary_Fiber.pdf" target="_blank" rel="noopener">USDA nutrient data</a> · <a href="https://www.ncbi.nlm.nih.gov/books/NBK589559/table/usdaddb12.tab1/" target="_blank" rel="noopener">USDA cereal baseline</a> · <a href="https://www.dietaryguidelines.gov/sites/default/files/2024-08/Food-Sources-Fiber-Standard-508C.pdf" target="_blank" rel="noopener">USDA/HHS portions</a> · <a href="https://nutrition.va.gov/NUTRITION/docs/UpdatedPatientEd/FiberContentofFoods2021.pdf" target="_blank" rel="noopener">VA oatmeal data</a></p>';
+const SWAP_SOURCES = '<p class="mut">Reference portions and example products. Fiber varies by brand and preparation. <a href="https://www.nal.usda.gov/sites/default/files/page-files/Total_Dietary_Fiber.pdf" target="_blank" rel="noopener">USDA nutrient data</a> · <a href="https://fdc.nal.usda.gov/" target="_blank" rel="noopener">USDA FoodData Central</a> · <a href="https://www.ncbi.nlm.nih.gov/books/NBK589559/table/usdaddb12.tab1/" target="_blank" rel="noopener">USDA cereal baseline</a> · <a href="https://www.dietaryguidelines.gov/sites/default/files/2024-08/Food-Sources-Fiber-Standard-508C.pdf" target="_blank" rel="noopener">USDA/HHS portions</a> · <a href="https://nutrition.va.gov/NUTRITION/docs/UpdatedPatientEd/FiberContentofFoods2021.pdf" target="_blank" rel="noopener">VA oatmeal data</a></p>';
 
 var TABS=["Check-in","Swaps","Habit","Notification","Today","Progress","Preferences"];
 
@@ -112,14 +154,20 @@ S.fib[meal]+=amt;S.done[meal]=true;S.last={meal:meal,amt:amt};if(habit)S.habitLo
 function fmtTime(t){var p=String(t||'').split(':'),h=+p[0],m=p[1]||'00';if(isNaN(h))return esc(t);return (h%12||12)+':'+m+(h<12?' AM':' PM')}
 function prefSec(t,act,body){return '<div class="card"><div class="row sb"><b>'+t+'</b><button class="chip" data-act="'+act+'" aria-label="Edit '+t.toLowerCase()+'">Edit</button></div>'+body+'</div>'}
 function view(){var h="";
-if(S.tab==0){h='<h1>Quick check-in</h1><p class="sub">Pick the staples you eat often. This takes about 30 seconds, every two weeks.</p>';
-staples().forEach(function(s){h+='<div class="card"><label class="stp"><input type="checkbox" data-act="stp" data-id="'+s.id+'"'+(S.on[s.id]?' checked':'')+'><span style="flex:1">'+s.name+'</span></label>'+(S.on[s.id]?'<div class="row" style="margin-top:8px"><span class="mut">Times per week</span><select data-act="freq" data-id="'+s.id+'" style="width:80px">'+[1,2,3,4,5,6,7].map(function(n){return '<option'+(S.freq[s.id]==n?' selected':'')+'>'+n+'</option>'}).join('')+'</select></div>':'')+'</div>'});
-var n=staples().filter(function(s){return S.on[s.id]}).length;
-h+=(showMore?'':'<button class="btn ghost" data-act="more" aria-expanded="false">＋ More</button>')+(showMore?'<form id="more-form" class="card custom-staple"><label for="staple-name">Staple name</label><input id="staple-name" maxlength="60" required placeholder="e.g. Regular pasta"><label for="staple-freq">Times per week</label><select id="staple-freq">'+[1,2,3,4,5,6,7].map(n=>'<option>'+n+'</option>').join('')+'</select><div class="staple-actions"><button class="btn ghost" type="button" data-act="more">Cancel</button><button class="btn" type="submit">Add staple</button></div></form>':'')+(n<1?'<div class="toast" style="color:#b3402f">Pick at least one staple.</div>':'')+'<button class="btn" data-act="saveStaples">Save staples</button>'}
+if(S.tab==0){h='<h1>Quick check-in</h1><p class="sub">Browse by category and tap the staples you eat often. This takes about 30 seconds, every two weeks.</p>';
+var mine=staples().filter(function(s){return S.on[s.id]}),n=mine.length;
+h+='<section class="card mine" aria-labelledby="mine-h"><div class="mine-head"><b id="mine-h">Your staples</b><span class="count" aria-label="'+n+' selected">'+n+'</span></div>'+
+(n?mine.map(function(s){var f=S.freq[s.id]||3;return '<div class="mine-item"><span class="nm">'+s.name+'</span><div class="step" role="group" aria-label="Times per week for '+s.name+'"><button type="button" data-act="freqStep" data-id="'+s.id+'" data-d="-1" aria-label="Fewer times per week"'+(f<=1?' disabled':'')+'>−</button><output aria-live="polite">'+f+'× / wk</output><button type="button" data-act="freqStep" data-id="'+s.id+'" data-d="1" aria-label="More times per week"'+(f>=7?' disabled':'')+'>+</button></div><button type="button" class="rm" data-act="toggleStaple" data-id="'+s.id+'" aria-label="Remove '+s.name+'">×</button></div>'}).join(''):'<p class="mut" style="margin:8px 0 0">Nothing yet. Tap a staple below to add it.</p>')+'</section>';
+h+='<h2 class="sec">Browse staples</h2><div class="cats" role="group" aria-label="Staple categories">'+[{id:'all',name:'All',icon:CAT_ALL}].concat(CATS).map(function(c){return '<button type="button" class="cat'+(S.cat===c.id?' on':'')+'" data-act="cat" data-id="'+c.id+'" aria-pressed="'+(S.cat===c.id)+'">'+catIcon(c.icon)+c.name+'</button>'}).join('')+'</div>';
+function tiles(list){return '<div class="tiles">'+list.map(function(s){var on=!!S.on[s.id],k=SWAPS[s.id]?Object.keys(SWAPS[s.id].options).length:0;return '<button type="button" class="tile'+(on?' on':'')+'" data-act="toggleStaple" data-id="'+s.id+'" aria-pressed="'+on+'"><span class="nm">'+s.name+'</span><small>'+(on?'Added':k?k+' swap options':'Your own')+'</small><span class="tick" aria-hidden="true">'+(on?'✓':'+')+'</span></button>'}).join('')+'</div>'}
+var cats=S.cat==='all'?CATS.concat(S.customStaples.length?[{id:'custom',name:'Your own'}]:[]):CATS.filter(function(c){return c.id===S.cat});
+cats.forEach(function(c){var list=staples().filter(function(s){return s.cat===c.id});if(S.cat==='all')h+='<h3 class="grp">'+c.name+'</h3>';h+=tiles(list)});
+h+=(showMore?'':'<button class="btn ghost" data-act="more" aria-expanded="false">Can’t find it? Add your own</button>')+(showMore?'<form id="more-form" class="card custom-staple"><label for="staple-name">Staple name</label><input id="staple-name" maxlength="60" required placeholder="e.g. Regular pasta"><label for="staple-freq">Times per week</label><select id="staple-freq">'+[1,2,3,4,5,6,7].map(n=>'<option'+(n===3?' selected':'')+'>'+n+'</option>').join('')+'</select><div class="staple-actions"><button class="btn ghost" type="button" data-act="more">Cancel</button><button class="btn" type="submit">Add staple</button></div></form>':'')+(n<1?'<div class="toast" style="color:#b3402f">Pick at least one staple.</div>':'')+'<button class="btn" data-act="saveStaples">Save staples</button>'}
 if(S.tab==1){var sel=staples().filter(function(s){return S.on[s.id]});
 h='<h1>Set your swaps</h1><p class="sub">Based on the staples you picked. Adopt a swap to add it to your meal plan.</p>';
 if(!sel.length)h+='<div class="note">No staples yet. Pick a few in Check-in.</div>';
-sel.forEach(function(s){var a=S.adopted[s.id],opts=SWAPS[s.id]?Object.keys(SWAPS[s.id].options):[s.to];h+='<div class="card"><div class="mut">You eat '+s.name.toLowerCase()+' about '+S.freq[s.id]+(S.freq[s.id]===1?' time':' times')+' a week</div><div style="font-weight:500;margin:8px 0">Swap '+s.name.toLowerCase()+' for</div><select aria-label="Alternative for '+s.name+'" data-act="swapChoice" data-id="'+s.id+'">'+opts.map(o=>'<option'+(choice(s)===o?' selected':'')+'>'+o+'</option>').join('')+'</select><div class="note" style="margin-top:12px"><b>'+ (SWAPS[s.id] ? 'Estimated +'+swapGain(s)+' g fiber today' : 'Fiber estimate unavailable') +'</b>'+(SWAPS[s.id]?'<div class="mut">'+SWAPS[s.id].portion+' of each food · one swap today'+(SWAPS[s.id].baseline?' · compared with '+SWAPS[s.id].baseline:'')+'</div>':'')+'</div><div class="row"><button class="chip'+(a?' on':'')+'" data-act="adopt" data-id="'+s.id+'">'+(a?'Added to meal plan':'Add to meal plan')+'</button></div>'+'</div>'});
+sel.forEach(function(s){var a=S.adopted[s.id],d=SWAPS[s.id],f=S.freq[s.id]||3;h+='<div class="card"><div class="mut">You eat '+s.name.toLowerCase()+' about '+f+(f===1?' time':' times')+' a week</div><div id="swap-h-'+s.id+'" style="font-weight:500;margin:8px 0">Swap '+s.name.toLowerCase()+' for</div>'+
+(d?'<div class="opts" role="radiogroup" aria-labelledby="swap-h-'+s.id+'">'+Object.keys(d.options).map(function(o){var on=choice(s)===o,ex=(d.examples||[]).includes(o);return '<button type="button" class="opt'+(on?' on':'')+'" role="radio" aria-checked="'+on+'" data-act="pickSwap" data-id="'+s.id+'" data-opt="'+esc(o)+'"><span class="rad" aria-hidden="true"></span><span class="nm">'+esc(o)+(ex?'<small>Example product · check the label</small>':'')+'</span><span class="gain">+'+optGain(s.id,o)+' g</span></button>'}).join('')+'</div><p class="mut" style="margin:0 0 12px">Fiber added per '+d.portion+', compared with '+(d.baseline||s.name.toLowerCase())+'. One swap a day.</p>':'<div class="note">Pick '+s.to+' and compare fiber on the package label. No estimate for your own staples.</div>')+'<div class="row"><button class="chip'+(a?' on':'')+'" data-act="adopt" data-id="'+s.id+'">'+(a?'Added to meal plan':'Add to meal plan')+'</button></div>'+'</div>'});
 var g=sel.filter(function(s){return S.adopted[s.id]});
 h+='<h1 style="font-size:18px;margin-top:14px">Meal plan ('+g.length+')</h1>'+(g.length?g.map(function(s){return '<div class="card row sb"><span>'+choice(s)+'</span><span class="mut">replaces '+s.name.toLowerCase()+'</span></div>'}).join(''):'<p class="mut">Nothing yet.</p>');if(g.length){
   const estimates = g.map(swapGain);
@@ -174,6 +222,10 @@ var nv=el('nav');nv.hidden=!S.onboarded||S.editing||S.tab===3;nv.innerHTML=[['To
 document.addEventListener("click",function(e){var b=e.target.closest("[data-act]");if(!b)return;var a=b.dataset.act,id=b.dataset.id;
 if(a=="back"){S.tab=S.editing?6:Math.max(0,S.tab-1);S.editing=false;S.toast="";render();el("scr").scrollTop=0}
 else if(a=="more"){showMore=!showMore;render();if(showMore)el("staple-name").focus()}
+else if(a=="cat"){S.cat=id;render()}
+else if(a=="toggleStaple"){var st=staples().find(function(s){return s.id===id});if(!st)return;S.on[id]=!S.on[id];if(S.on[id])S.freq[id]=S.freq[id]||st.freq||3;else clearSwap(id);S.toast="";render()}
+else if(a=="freqStep"){S.freq[id]=Math.max(1,Math.min(7,(S.freq[id]||3)+Number(b.dataset.d)));render()}
+else if(a=="pickSwap"){var o=b.dataset.opt;if(!SWAPS[id]||!Object.hasOwn(SWAPS[id].options,o)||choice({id:id})===o)return;clearSwap(id);S.planConfirmed=false;S.swapChoices[id]=o;S.declined[id]=false;render()}
 
 else if(a=="undo"){var prev=S.history.pop();if(prev)Object.assign(S,prev);S.toast="Last entry undone.";render()}
 else if(a=="custom"){var inp=el("grams"),v=Number(inp.value);if(!Number.isFinite(v)||v<=0||v>100){inp.setCustomValidity("Enter an amount between 0.1 and 100 grams.");inp.reportValidity();return}log(S.meal,Math.round(v*10)/10,"Fiber added to "+S.meal.toLowerCase()+".")}
